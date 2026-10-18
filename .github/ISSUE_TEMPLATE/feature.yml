@@ -1,0 +1,35 @@
+name: Feature request
+description: Propose a new capability or a change to an existing one.
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Who has the problem, and what do they need to achieve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should change? Include examples of commands, decision files or UI where useful.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Testable statements that tell us the request is done.
+      placeholder: "- Given ..., when ..., then ..."
+    validations:
+      required: true
+  - type: textarea
+    id: decisions
+    attributes:
+      label: Related decisions
+      description: Decisions or ADRs this request implements, changes or depends on.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

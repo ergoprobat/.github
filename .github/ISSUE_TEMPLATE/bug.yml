@@ -1,0 +1,41 @@
+name: Bug report
+description: Something does not work as documented.
+labels: ["type:bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for the report. Do not report security vulnerabilities here; follow the security policy instead.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `ergo version`, or the release, commit or image tag you run.
+      placeholder: cli/v0.3.0
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps, including the decision file, the command you ran and its input.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Paste the full output.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, CI system, Terraform or OpenTofu version, AI coding agent, as relevant.

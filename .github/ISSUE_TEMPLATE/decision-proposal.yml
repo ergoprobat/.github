@@ -1,0 +1,80 @@
+name: Decision proposal
+description: Propose a binding engineering decision, recorded as an EDR file once approved.
+labels: ["needs-decision"]
+body:
+  - type: markdown
+    attributes:
+      value: The fields follow the ergo Decision Record (EDR) format. An approved proposal becomes an EDR file in the repository's decision folder.
+  - type: input
+    id: title
+    attributes:
+      label: Title
+      description: One sentence stating the decision.
+      placeholder: S3 buckets in production must use KMS customer-managed keys
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Owner
+      description: The team that owns the decision, never a single person.
+      placeholder: team:platform
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Where the decision applies (organization, repositories, paths, environments).
+      placeholder: "org: acme, repo: acme/infra-*, paths: terraform/**, env: prod"
+    validations:
+      required: true
+  - type: dropdown
+    id: criticality
+    attributes:
+      label: Criticality
+      options:
+        - blocking
+        - warning
+        - advisory
+    validations:
+      required: true
+  - type: input
+    id: validity
+    attributes:
+      label: Valid from and review date
+      placeholder: "valid_from: 2026-11-01, review_by: 2027-05-01"
+  - type: input
+    id: supersedes
+    attributes:
+      label: Supersedes
+      description: Slugs of decisions this one replaces, if any.
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: The forces and constraints that make the decision necessary.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Each rejected option and the concrete reason it lost.
+    validations:
+      required: true
+  - type: textarea
+    id: consequences
+    attributes:
+      label: Consequences
+      description: What becomes easier, harder or locked in.
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: How the decision is checked (engine and target, for example OPA on terraform-plan, or an existing CI job bound as evidence).
+  - type: textarea
+    id: sources
+    attributes:
+      label: Sources
+      description: Links to the PRs, documents or discussions that led to the proposal.

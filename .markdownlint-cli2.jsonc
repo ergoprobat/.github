@@ -1,0 +1,14 @@
+{
+  "config": {
+    "default": true,
+    // Prose is never hard-wrapped: one paragraph or list item per line.
+    "MD013": false,
+    "MD024": { "siblings_only": true },
+    // ADRs carry `title` in EDR frontmatter and still need their own H1.
+    "MD025": { "front_matter_title": "" },
+    "MD041": { "front_matter_title": "" }
+  },
+  "globs": ["**/*.md"],
+  // The PR template is a PR body fragment, so it starts at H2.
+  "ignores": ["node_modules/**", ".github/pull_request_template.md"]
+}
