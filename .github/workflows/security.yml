@@ -1,0 +1,169 @@
+name: security
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # gitleaks-action v3 requires an organization license. The MIT CLI does not.
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          version="8.30.1"
+          archive="gitleaks_${version}_linux_x64.tar.gz"
+          checksum="551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+          url="https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}"
+          tmp="${RUNNER_TEMP}/gitleaks-install"
+          mkdir -p "${tmp}/bin"
+          curl -fsSL -o "${tmp}/${archive}" "$url"
+          echo "${checksum}  ${tmp}/${archive}" | sha256sum -c -
+          tar -xzf "${tmp}/${archive}" -C "${tmp}/bin" gitleaks
+          chmod 0755 "${tmp}/bin/gitleaks"
+          echo "${tmp}/bin" >> "$GITHUB_PATH"
+      - name: Scan for secrets
+        run: gitleaks detect --source "${GITHUB_WORKSPACE}" --redact --verbose --exit-code 1 --no-banner
+
+  trivy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          cache: "false"
+
+  semgrep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # semgrep-action is deprecated and pulls a floating image. This digest is semgrep 1.181.0 linux/amd64.
+      - name: Scan with Semgrep
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -e SEMGREP_SEND_METRICS=off \
+            -e SEMGREP_ENABLE_VERSION_CHECK=0 \
+            -v "${GITHUB_WORKSPACE}:/src" \
+            -w /src \
+            semgrep/semgrep@sha256:c47e426f7f0cfa19af6d7877560d0a7135f683b8090ad0efc97c4ec7810dc435 \
+            scan --config p/default --error --metrics=off --disable-version-check
+
+  codeql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+    steps:
+      - name: Skip private repositories
+        id: visibility
+        env:
+          REPO_PRIVATE: ${{ github.event.repository.private }}
+          REPO_VISIBILITY: ${{ github.event.repository.visibility }}
+        run: |
+          set -euo pipefail
+          if [ "$REPO_PRIVATE" = "true" ] || [ "$REPO_VISIBILITY" = "private" ]; then
+            echo "scan=false" >> "$GITHUB_OUTPUT"
+            echo "Private repository: skipping CodeQL analysis."
+          else
+            echo "scan=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.visibility.outputs.scan == 'true'
+        with:
+          persist-credentials: false
+      - name: Detect supported languages
+        id: detect
+        if: steps.visibility.outputs.scan == 'true'
+        run: |
+          set -euo pipefail
+          languages=""
+          compiled="false"
+          add() {
+            if [ -n "$languages" ]; then
+              languages="${languages},$1"
+            else
+              languages="$1"
+            fi
+          }
+          files="$(git ls-files)"
+          if printf '%s\n' "$files" | grep -Eq '\.py$'; then
+            add python
+          fi
+          if printf '%s\n' "$files" | grep -Eq '\.(js|jsx|mjs|cjs|ts|tsx)$'; then
+            add javascript-typescript
+          fi
+          if printf '%s\n' "$files" | grep -Eq '\.rb$'; then
+            add ruby
+          fi
+          if printf '%s\n' "$files" | grep -Eq '\.go$'; then
+            compiled="true"
+            add go
+          fi
+          if printf '%s\n' "$files" | grep -Eq '\.(java|kt|kts)$'; then
+            compiled="true"
+            add java-kotlin
+          fi
+          if printf '%s\n' "$files" | grep -Eq '\.(c|cc|cpp|cxx|h|hpp)$'; then
+            compiled="true"
+            add c-cpp
+          fi
+          if printf '%s\n' "$files" | grep -Eq '\.cs$'; then
+            compiled="true"
+            add csharp
+          fi
+          if printf '%s\n' "$files" | grep -Eq '\.swift$'; then
+            compiled="true"
+            add swift
+          fi
+          build_mode=""
+          if [ -n "$languages" ] && [[ "$languages" != *,* ]]; then
+            if [ "$compiled" = "false" ]; then
+              build_mode="none"
+            else
+              build_mode="autobuild"
+            fi
+          fi
+          if [ -z "$languages" ]; then
+            echo "No supported CodeQL language. Skipping analysis."
+          else
+            echo "CodeQL languages: ${languages} (build mode: ${build_mode:-default})"
+          fi
+          echo "languages=${languages}" >> "$GITHUB_OUTPUT"
+          echo "build_mode=${build_mode}" >> "$GITHUB_OUTPUT"
+      - name: Initialize CodeQL
+        if: steps.detect.conclusion == 'success' && steps.detect.outputs.languages != '' && steps.detect.outputs.build_mode != ''
+        uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          languages: ${{ steps.detect.outputs.languages }}
+          build-mode: ${{ steps.detect.outputs.build_mode }}
+      - name: Initialize CodeQL
+        if: steps.detect.conclusion == 'success' && steps.detect.outputs.languages != '' && steps.detect.outputs.build_mode == ''
+        uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          languages: ${{ steps.detect.outputs.languages }}
+      - name: Analyze
+        if: steps.detect.conclusion == 'success' && steps.detect.outputs.languages != ''
+        uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
