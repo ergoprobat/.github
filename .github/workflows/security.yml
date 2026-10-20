@@ -42,6 +42,8 @@ jobs:
           persist-credentials: false
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          # The action default is v0.70.0. Pin the scanner to the current Trivy release.
+          version: v0.76.0
           scan-type: fs
           scan-ref: .
           scanners: vuln,misconfig
