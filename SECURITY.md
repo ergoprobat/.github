@@ -16,4 +16,4 @@ Where you can, include the affected repository and version or commit, a descript
 
 ## Supported versions
 
-ergo has no released versions yet. Once releases start, this section lists the supported versions and their support period.
+The latest release of the affected repository is supported. For the ergo CLI, the current release is v0.1.1.
