@@ -1,0 +1,85 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "dependencyDashboard": false,
+  "minimumReleaseAge": "3 days",
+  "automergeStrategy": "squash",
+  "platformAutomerge": true,
+  "packageRules": [
+    {
+      "description": "Group Go patch updates and automerge them after required checks",
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["patch"],
+      "groupName": "go patch",
+      "groupSlug": "go-patch",
+      "automerge": true
+    },
+    {
+      "description": "Group GitHub Actions patch updates and automerge them after required checks",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["patch"],
+      "groupName": "github actions patch",
+      "groupSlug": "github-actions-patch",
+      "automerge": true
+    },
+    {
+      "description": "Group Dockerfile patch updates and automerge them after required checks",
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["patch"],
+      "groupName": "dockerfile patch",
+      "groupSlug": "dockerfile-patch",
+      "automerge": true
+    },
+    {
+      "description": "Group patch updates from other managers and automerge them after required checks",
+      "matchUpdateTypes": ["patch"],
+      "matchManagers": ["!gomod", "!github-actions", "!dockerfile"],
+      "groupName": "other patch",
+      "groupSlug": "other-patch",
+      "automerge": true
+    },
+    {
+      "description": "Group Go minor and major updates for review",
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["minor", "major"],
+      "groupName": "go minor and major",
+      "groupSlug": "go-minor-major",
+      "automerge": false
+    },
+    {
+      "description": "Group GitHub Actions minor and major updates for review",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "major"],
+      "groupName": "github actions minor and major",
+      "groupSlug": "github-actions-minor-major",
+      "automerge": false
+    },
+    {
+      "description": "Group Dockerfile minor and major updates for review",
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["minor", "major"],
+      "groupName": "dockerfile minor and major",
+      "groupSlug": "dockerfile-minor-major",
+      "automerge": false
+    },
+    {
+      "description": "Group minor and major updates from other managers for review",
+      "matchUpdateTypes": ["minor", "major"],
+      "matchManagers": ["!gomod", "!github-actions", "!dockerfile"],
+      "groupName": "other minor and major",
+      "groupSlug": "other-minor-major",
+      "automerge": false
+    },
+    {
+      "description": "These repositories cannot require status checks, so patch pull requests stay open",
+      "matchRepositories": [
+        "ergoprobat/ergo-spec",
+        "ergoprobat/ergo-ee",
+        "ergoprobat/ergo-ops",
+        "ergoprobat/homebrew-tap"
+      ],
+      "automerge": false,
+      "platformAutomerge": false
+    }
+  ]
+}
