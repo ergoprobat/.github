@@ -6,40 +6,21 @@
     "enabled": false
   },
   "minimumReleaseAge": "3 days",
-  "automergeStrategy": "squash",
-  "platformAutomerge": true,
   "packageRules": [
     {
-      "description": "Group Go patch updates and automerge them after required checks",
-      "matchManagers": ["gomod"],
-      "matchUpdateTypes": ["patch"],
-      "groupName": "go patch",
-      "groupSlug": "go-patch",
-      "automerge": true
-    },
-    {
-      "description": "Group GitHub Actions patch updates and automerge them after required checks",
-      "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["patch"],
-      "groupName": "github actions patch",
-      "groupSlug": "github-actions-patch",
-      "automerge": true
-    },
-    {
-      "description": "Group Dockerfile patch updates and automerge them after required checks",
-      "matchManagers": ["dockerfile"],
-      "matchUpdateTypes": ["patch"],
-      "groupName": "dockerfile patch",
-      "groupSlug": "dockerfile-patch",
-      "automerge": true
-    },
-    {
-      "description": "Group patch updates from other managers and automerge them after required checks",
-      "matchUpdateTypes": ["patch"],
-      "matchManagers": ["!gomod", "!github-actions", "!dockerfile"],
-      "groupName": "other patch",
-      "groupSlug": "other-patch",
-      "automerge": true
+      "description": "Skip every update that is not minor or major",
+      "matchUpdateTypes": [
+        "patch",
+        "pin",
+        "pinDigest",
+        "digest",
+        "lockFileMaintenance",
+        "lockfileUpdate",
+        "rollback",
+        "bump",
+        "replacement"
+      ],
+      "enabled": false
     },
     {
       "description": "Group Go minor and major updates for review",
@@ -72,17 +53,6 @@
       "groupName": "other minor and major",
       "groupSlug": "other-minor-major",
       "automerge": false
-    },
-    {
-      "description": "These repositories cannot require status checks, so patch pull requests stay open",
-      "matchRepositories": [
-        "ergoprobat/ergo-spec",
-        "ergoprobat/ergo-ee",
-        "ergoprobat/ergo-ops",
-        "ergoprobat/homebrew-tap"
-      ],
-      "automerge": false,
-      "platformAutomerge": false
     }
   ]
 }
