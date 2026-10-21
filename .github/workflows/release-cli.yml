@@ -1,0 +1,249 @@
+name: release-cli
+
+on:
+  workflow_call:
+    secrets:
+      HOMEBREW_TAP_TOKEN:
+        required: false
+    inputs:
+      ref:
+        description: Git ref of ergoprobat/ergo to check out
+        required: true
+        type: string
+      tag:
+        description: Release tag, including the leading v
+        required: true
+        type: string
+      sign-only:
+        description: Sign an existing release without building it
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    name: release / supply-chain
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TAG: ${{ inputs.tag }}
+      SIGN_ONLY: ${{ inputs.sign-only }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ergoprobat/ergo
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: ${{ !inputs.sign-only }}
+        with:
+          go-version-file: go.mod
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        if: ${{ !inputs.sign-only }}
+        with:
+          driver: docker-container
+
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        if: ${{ !inputs.sign-only }}
+        id: goreleaser
+        with:
+          version: v2.18.3
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          SKIP_HOMEBREW: ${{ secrets.HOMEBREW_TAP_TOKEN == '' }}
+
+      - name: Resolve the image digest
+        id: image
+        env:
+          ARTIFACTS: ${{ steps.goreleaser.outputs.artifacts }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [[ "${SIGN_ONLY}" == "true" ]]; then
+            export TAG_VERSION="${TAG#v}"
+            digest=$(gh api --paginate /orgs/ergoprobat/packages/container/ergo/versions \
+              --jq '.[] | select(any(.metadata.container.tags[]?; . == env.TAG_VERSION)) | .name' | head -n 1)
+          else
+            digest=$(printf '%s' "$ARTIFACTS" | jq -r '[.[] | select(.type == "Docker Image" or .type == "Docker Manifest") | (.extra.Digest // empty)] | map(select(length > 0)) | unique | .[0] // empty')
+          fi
+          if [[ -z "${digest}" || "${digest}" == "null" ]]; then
+            echo "image digest not found for ${TAG}" >&2
+            if [[ -n "${ARTIFACTS}" ]]; then
+              printf '%s' "$ARTIFACTS" | jq -r '.[] | [.type, .name] | @tsv'
+            fi
+            exit 1
+          fi
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "Resolved ${digest}"
+
+      - name: Download the existing release
+        if: ${{ inputs.sign-only }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          gh release download "${TAG}" --dir dist --clobber
+
+      - name: Collect release subjects
+        id: subjects
+        if: ${{ !inputs.sign-only }}
+        run: |
+          set -euo pipefail
+          find dist -maxdepth 1 -type f \( -name 'ergo_*.tar.gz' -o -name 'ergo_*.zip' -o -name 'checksums.txt' \) | sort > "${RUNNER_TEMP}/subjects.txt"
+          grep -q 'checksums.txt$' "${RUNNER_TEMP}/subjects.txt"
+          {
+            echo "paths<<EOF"
+            cat "${RUNNER_TEMP}/subjects.txt"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Attest build provenance for the archives
+        if: ${{ !inputs.sign-only }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ steps.subjects.outputs.paths }}
+
+      - name: Attest build provenance for the image
+        if: ${{ !inputs.sign-only }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/ergoprobat/ergo
+          subject-digest: ${{ steps.image.outputs.digest }}
+          push-to-registry: true
+
+      - name: Install Syft
+        run: |
+          set -euo pipefail
+          version="1.55.0"
+          archive="syft_${version}_linux_amd64.tar.gz"
+          checksum="bb65249542db5fedeeb4d3f9b018b75e7264dbfbbb10486f044581a92f90490d"
+          url="https://github.com/anchore/syft/releases/download/v${version}/${archive}"
+          tmp="${RUNNER_TEMP}/syft-install"
+          mkdir -p "${tmp}/bin"
+          curl -fsSL -o "${tmp}/${archive}" "$url"
+          echo "${checksum}  ${tmp}/${archive}" | sha256sum -c -
+          tar -xzf "${tmp}/${archive}" -C "${tmp}/bin" syft
+          chmod 0755 "${tmp}/bin/syft"
+          echo "${tmp}/bin" >> "$GITHUB_PATH"
+
+      - name: Write CycloneDX SBOMs
+        id: sbom
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          mkdir -p sbom
+          module="sbom/ergo_${version}_sbom.cdx.json"
+          image="sbom/ergo_${version}_image.cdx.json"
+          syft "dir:." --exclude "./dist/**" -o "cyclonedx-json=${module}"
+          syft "ghcr.io/ergoprobat/ergo@${{ steps.image.outputs.digest }}" -o "cyclonedx-json=${image}"
+          echo "module=${module}" >> "$GITHUB_OUTPUT"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+
+      - name: Attest the module SBOM
+        if: ${{ !inputs.sign-only }}
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-path: ${{ steps.subjects.outputs.paths }}
+          sbom-path: ${{ steps.sbom.outputs.module }}
+
+      - name: Attest the image SBOM
+        if: ${{ !inputs.sign-only }}
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-name: ghcr.io/ergoprobat/ergo
+          subject-digest: ${{ steps.image.outputs.digest }}
+          sbom-path: ${{ steps.sbom.outputs.image }}
+          push-to-registry: true
+
+      - name: Install cosign
+        run: |
+          set -euo pipefail
+          version="3.1.4"
+          binary="cosign-linux-amd64"
+          checksum="424e2c97d0b45fd7a6b608a87f090f35633f4c23ece5f092d48bba11aaf4bbfa"
+          url="https://github.com/sigstore/cosign/releases/download/v${version}/${binary}"
+          tmp="${RUNNER_TEMP}/cosign-install"
+          mkdir -p "${tmp}/bin"
+          curl -fsSL -o "${tmp}/bin/cosign" "$url"
+          echo "${checksum}  ${tmp}/bin/cosign" | sha256sum -c -
+          chmod 0755 "${tmp}/bin/cosign"
+          echo "${tmp}/bin" >> "$GITHUB_PATH"
+
+      - name: Sign the image and checksums
+        id: signature
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          set -euo pipefail
+          image="ghcr.io/ergoprobat/ergo@${DIGEST}"
+          cosign sign --yes "${image}"
+          bundle="dist/checksums.txt.sigstore.json"
+          cosign sign-blob --yes --bundle "${bundle}" dist/checksums.txt
+          if [[ "${SIGN_ONLY}" == "true" ]]; then
+            cosign attest --yes --type cyclonedx --predicate "${{ steps.sbom.outputs.image }}" "${image}"
+          fi
+          gh release upload "${TAG}" "${bundle}" "${{ steps.sbom.outputs.module }}" "${{ steps.sbom.outputs.image }}" --clobber
+
+      - name: Verify signatures and provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+          SIGNER_WORKFLOW: ergoprobat/.github/.github/workflows/release-cli.yml
+          IDENTITY_REGEXP: '^https://github.com/ergoprobat/\.github/\.github/workflows/release-cli\.yml@'
+          ISSUER: https://token.actions.githubusercontent.com
+        run: |
+          set -euo pipefail
+          image="ghcr.io/ergoprobat/ergo@${DIGEST}"
+          workdir="${RUNNER_TEMP}/verify"
+          mkdir -p "${workdir}"
+          gh release download "${TAG}" --dir "${workdir}" --clobber --pattern "ergo_*" --pattern "checksums.txt*"
+          cosign verify \
+            --certificate-identity-regexp "${IDENTITY_REGEXP}" \
+            --certificate-oidc-issuer "${ISSUER}" \
+            "${image}"
+          cosign verify-blob \
+            --bundle "${workdir}/checksums.txt.sigstore.json" \
+            --certificate-identity-regexp "${IDENTITY_REGEXP}" \
+            --certificate-oidc-issuer "${ISSUER}" \
+            "${workdir}/checksums.txt"
+          if [[ "${SIGN_ONLY}" == "true" ]]; then
+            cosign verify-attestation \
+              --type cyclonedx \
+              --certificate-identity-regexp "${IDENTITY_REGEXP}" \
+              --certificate-oidc-issuer "${ISSUER}" \
+              "${image}"
+            exit 0
+          fi
+          while IFS= read -r path; do
+            name=$(basename "${path}")
+            echo "Verifying ${name}"
+            gh attestation verify "${workdir}/${name}" \
+              --repo "${{ github.repository }}" \
+              --signer-workflow "${SIGNER_WORKFLOW}"
+          done < <(find "${workdir}" -maxdepth 1 -type f \( -name 'ergo_*.tar.gz' -o -name 'ergo_*.zip' -o -name 'checksums.txt' \) | sort)
+          gh attestation verify "oci://${image}" \
+            --repo "${{ github.repository }}" \
+            --signer-workflow "${SIGNER_WORKFLOW}"
+          gh attestation verify "oci://${image}" \
+            --repo "${{ github.repository }}" \
+            --signer-workflow "${SIGNER_WORKFLOW}" \
+            --predicate-type "https://cyclonedx.org/bom"
