@@ -30,6 +30,10 @@ Thanks for your interest in ergo. The project is pre-alpha: most repositories ar
 - Keep each pull request to one logical change. Required checks must pass, and a maintainer reviews every change.
 - The default branch accepts only signed commits; squash merges made through GitHub satisfy this.
 
+## Tests
+
+When you add major new functionality to software in an ergo repository, add automated tests for that behavior in the same change. For Go code in `ergo`, run `go test ./...` locally and keep the suite green in CI. Prefer table-driven unit tests for parsers and commands, and fuzz targets for parsers that take untrusted text.
+
 ## Code of conduct
 
 Everyone taking part in ergo spaces follows the [Code of Conduct](https://github.com/ergoprobat/.github/blob/main/CODE_OF_CONDUCT.md).
