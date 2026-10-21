@@ -1,7 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": ["config:recommended", ":disableDependencyDashboard"],
   "dependencyDashboard": false,
+  "vulnerabilityAlerts": {
+    "enabled": false
+  },
   "minimumReleaseAge": "3 days",
   "automergeStrategy": "squash",
   "platformAutomerge": true,
