@@ -1,5 +1,8 @@
 # ipso
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ipsofacto-io/ipso/badge)](https://scorecard.dev/viewer/?uri=github.com/ipsofacto-io/ipso)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15758/badge)](https://www.bestpractices.dev/en/projects/15758)
+
 Registry of binding engineering decisions, enforced at PR, CI, plan and AI-agent time.
 
 Architecture and infrastructure decisions usually live in ADRs, PR threads and chat, where nothing enforces them and nobody can prove which rules applied when a change shipped. AI coding agents now write a large share of changes and follow rules files only probabilistically. ipso makes every binding decision explicit, owned, scoped and time-bounded, compiles it into checks for engines teams already run (OPA/Conftest, Semgrep, dependency-cruiser, ArchUnit, Checkov, Kyverno), and enforces it on pull requests, in CI, on `terraform plan` and before an AI agent edits a file. LLMs may propose decisions; people approve them, and only deterministic checks block.
