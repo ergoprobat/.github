@@ -15,7 +15,7 @@ on:
         required: true
         type: string
       sign-only:
-        description: Sign an existing release without building it
+        description: Sign an existing ipso release without building it. Releases published as ergo keep their original signatures and are not supported
         required: false
         type: boolean
         default: false
