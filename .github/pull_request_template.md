@@ -8,7 +8,7 @@
 
 ## Decisions affected
 
-<!-- Decisions this pull request implements, changes or touches, or "none". End this description with one `ergo: <decision-slug>` line per decision; it becomes a commit trailer on squash merge. -->
+<!-- Decisions this pull request implements, changes or touches, or "none". End this description with one `ipso: <decision-slug>` line per decision; it becomes a commit trailer on squash merge. -->
 
 ## Test evidence
 

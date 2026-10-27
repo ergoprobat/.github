@@ -4,7 +4,7 @@ labels: ["needs-decision"]
 body:
   - type: markdown
     attributes:
-      value: The fields follow the ergo Decision Record (EDR) format. An approved proposal becomes an EDR file in the repository's decision folder.
+      value: The fields follow the Engineering Decision Record (EDR) format. An approved proposal becomes an EDR file in the repository's decision folder.
   - type: input
     id: title
     attributes:
