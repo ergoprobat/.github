@@ -22,7 +22,7 @@ The latest release of the affected repository is supported. For the ipso CLI, th
 
 Releases up to v0.1.1 were published under the previous product name and organization. Cosign signatures and build attestations for those releases use these literal identities (they cannot be rewritten):
 
-- Signer workflow: `https://github.com/ergoprobat/.github/.github/workflows/release-cli.yml`
-- Image: `ghcr.io/ergoprobat/ergo`
+- Signer workflow: `https://github.com/ipsofacto-io/.github/.github/workflows/release-cli.yml`
+- Image: `ghcr.io/ipsofacto-io/ipso`
 
 Later releases use the image `ghcr.io/ipsofacto-io/ipso` and the identity `https://github.com/ipsofacto-io/.github/.github/workflows/release-cli.yml`. Verify each release against the identity it was signed with. The previous organization stays empty so that nobody else can obtain a token with the old identity.
