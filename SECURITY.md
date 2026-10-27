@@ -18,6 +18,11 @@ Where you can, include the affected repository and version or commit, a descript
 
 The latest release of the affected repository is supported. For the ipso CLI, the current release is v0.2.0.
 
-## Verifying releases published as ergo
+## Verifying releases up to v0.1.1
 
-Releases up to v0.1.1 were published as `ergo` from the `ergoprobat` organization. Their cosign signatures and build attestations carry the signer workflow identity `https://github.com/ergoprobat/.github/.github/workflows/release-cli.yml`, and their image is `ghcr.io/ergoprobat/ergo`. Later releases use the image `ghcr.io/ipsofacto-io/ipso` and the identity `https://github.com/ipsofacto-io/.github/.github/workflows/release-cli.yml`. Verify each release against the identity it was signed with. The `ergoprobat` organization stays empty so that nobody else can obtain a token with the old identity.
+Releases up to v0.1.1 were published under the previous product name and organization. Cosign signatures and build attestations for those releases use these literal identities (they cannot be rewritten):
+
+- Signer workflow: `https://github.com/ergoprobat/.github/.github/workflows/release-cli.yml`
+- Image: `ghcr.io/ergoprobat/ergo`
+
+Later releases use the image `ghcr.io/ipsofacto-io/ipso` and the identity `https://github.com/ipsofacto-io/.github/.github/workflows/release-cli.yml`. Verify each release against the identity it was signed with. The previous organization stays empty so that nobody else can obtain a token with the old identity.
