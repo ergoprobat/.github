@@ -16,7 +16,7 @@ Where you can, include the affected repository and version or commit, a descript
 
 ## Supported versions
 
-The latest release of the affected repository is supported. For the ipso CLI, the current release is v0.1.1, which was published under the name `ergo`.
+The latest release of the affected repository is supported. For the ipso CLI, the current release is v0.2.0.
 
 ## Verifying releases published as ergo
 
