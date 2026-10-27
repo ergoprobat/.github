@@ -18,11 +18,11 @@ Where you can, include the affected repository and version or commit, a descript
 
 The latest release of the affected repository is supported. For the ipso CLI, the current release is v0.2.0.
 
-## Verifying releases up to v0.1.1
+## Verifying releases
 
-Releases up to v0.1.1 were published under the previous product name and organization. Cosign signatures and build attestations for those releases use these literal identities (they cannot be rewritten):
+From v0.2.0 onward, CLI releases are signed by `ipsofacto-io/.github`. Verify against:
 
-- Signer workflow: `https://github.com/ipsofacto-io/.github/.github/workflows/release-cli.yml`
+- Signer workflow identity: `https://github.com/ipsofacto-io/.github/.github/workflows/release-cli.yml`
 - Image: `ghcr.io/ipsofacto-io/ipso`
 
-Later releases use the image `ghcr.io/ipsofacto-io/ipso` and the identity `https://github.com/ipsofacto-io/.github/.github/workflows/release-cli.yml`. Verify each release against the identity it was signed with. The previous organization stays empty so that nobody else can obtain a token with the old identity.
+Releases up to v0.1.1 were published under a previous organization and product name. Their cosign signatures and attestations still use that previous signer identity. Read the identity from the release attestation itself (`gh attestation verify` / cosign) rather than from this file. The previous organization stays empty so nobody else can mint that identity.
