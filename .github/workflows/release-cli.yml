@@ -7,7 +7,7 @@ on:
         required: false
     inputs:
       ref:
-        description: Git ref of ergoprobat/ergo to check out
+        description: Git ref of ipsofacto-io/ipso to check out
         required: true
         type: string
       tag:
@@ -15,7 +15,7 @@ on:
         required: true
         type: string
       sign-only:
-        description: Sign an existing release without building it
+        description: Sign an existing ipso release without building it. Releases published as ergo keep their original signatures and are not supported
         required: false
         type: boolean
         default: false
@@ -37,7 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: ergoprobat/ergo
+          repository: ipsofacto-io/ipso
           ref: ${{ inputs.ref }}
           fetch-depth: 0
           persist-credentials: false
@@ -78,7 +78,7 @@ jobs:
           set -euo pipefail
           if [[ "${SIGN_ONLY}" == "true" ]]; then
             export TAG_VERSION="${TAG#v}"
-            digest=$(gh api --paginate /orgs/ergoprobat/packages/container/ergo/versions \
+            digest=$(gh api --paginate /orgs/ipsofacto-io/packages/container/ipso/versions \
               --jq '.[] | select(any(.metadata.container.tags[]?; . == env.TAG_VERSION)) | .name' | head -n 1)
           else
             digest=$(printf '%s' "$ARTIFACTS" | jq -r '[.[] | select(.type == "Docker Image" or .type == "Docker Manifest") | (.extra.Digest // empty)] | map(select(length > 0)) | unique | .[0] // empty')
@@ -107,7 +107,7 @@ jobs:
         if: ${{ !inputs.sign-only }}
         run: |
           set -euo pipefail
-          find dist -maxdepth 1 -type f \( -name 'ergo_*.tar.gz' -o -name 'ergo_*.zip' -o -name 'checksums.txt' \) | sort > "${RUNNER_TEMP}/subjects.txt"
+          find dist -maxdepth 1 -type f \( -name 'ipso_*.tar.gz' -o -name 'ipso_*.zip' -o -name 'checksums.txt' \) | sort > "${RUNNER_TEMP}/subjects.txt"
           grep -q 'checksums.txt$' "${RUNNER_TEMP}/subjects.txt"
           {
             echo "paths<<EOF"
@@ -125,7 +125,7 @@ jobs:
         if: ${{ !inputs.sign-only }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-name: ghcr.io/ergoprobat/ergo
+          subject-name: ghcr.io/ipsofacto-io/ipso
           subject-digest: ${{ steps.image.outputs.digest }}
           push-to-registry: true
 
@@ -150,10 +150,10 @@ jobs:
           set -euo pipefail
           version="${TAG#v}"
           mkdir -p sbom
-          module="sbom/ergo_${version}_sbom.cdx.json"
-          image="sbom/ergo_${version}_image.cdx.json"
+          module="sbom/ipso_${version}_sbom.cdx.json"
+          image="sbom/ipso_${version}_image.cdx.json"
           syft "dir:." --exclude "./dist/**" -o "cyclonedx-json=${module}"
-          syft "ghcr.io/ergoprobat/ergo@${{ steps.image.outputs.digest }}" -o "cyclonedx-json=${image}"
+          syft "ghcr.io/ipsofacto-io/ipso@${{ steps.image.outputs.digest }}" -o "cyclonedx-json=${image}"
           echo "module=${module}" >> "$GITHUB_OUTPUT"
           echo "image=${image}" >> "$GITHUB_OUTPUT"
 
@@ -168,7 +168,7 @@ jobs:
         if: ${{ !inputs.sign-only }}
         uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
         with:
-          subject-name: ghcr.io/ergoprobat/ergo
+          subject-name: ghcr.io/ipsofacto-io/ipso
           subject-digest: ${{ steps.image.outputs.digest }}
           sbom-path: ${{ steps.sbom.outputs.image }}
           push-to-registry: true
@@ -194,7 +194,7 @@ jobs:
           DIGEST: ${{ steps.image.outputs.digest }}
         run: |
           set -euo pipefail
-          image="ghcr.io/ergoprobat/ergo@${DIGEST}"
+          image="ghcr.io/ipsofacto-io/ipso@${DIGEST}"
           cosign sign --yes "${image}"
           bundle="dist/checksums.txt.sigstore.json"
           cosign sign-blob --yes --bundle "${bundle}" dist/checksums.txt
@@ -207,15 +207,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           DIGEST: ${{ steps.image.outputs.digest }}
-          SIGNER_WORKFLOW: ergoprobat/.github/.github/workflows/release-cli.yml
-          IDENTITY_REGEXP: '^https://github.com/ergoprobat/\.github/\.github/workflows/release-cli\.yml@'
+          SIGNER_WORKFLOW: ipsofacto-io/.github/.github/workflows/release-cli.yml
+          IDENTITY_REGEXP: '^https://github.com/ipsofacto-io/\.github/\.github/workflows/release-cli\.yml@'
           ISSUER: https://token.actions.githubusercontent.com
         run: |
           set -euo pipefail
-          image="ghcr.io/ergoprobat/ergo@${DIGEST}"
+          image="ghcr.io/ipsofacto-io/ipso@${DIGEST}"
           workdir="${RUNNER_TEMP}/verify"
           mkdir -p "${workdir}"
-          gh release download "${TAG}" --dir "${workdir}" --clobber --pattern "ergo_*" --pattern "checksums.txt*"
+          gh release download "${TAG}" --dir "${workdir}" --clobber --pattern "ipso_*" --pattern "checksums.txt*"
           cosign verify \
             --certificate-identity-regexp "${IDENTITY_REGEXP}" \
             --certificate-oidc-issuer "${ISSUER}" \
@@ -239,7 +239,7 @@ jobs:
             gh attestation verify "${workdir}/${name}" \
               --repo "${{ github.repository }}" \
               --signer-workflow "${SIGNER_WORKFLOW}"
-          done < <(find "${workdir}" -maxdepth 1 -type f \( -name 'ergo_*.tar.gz' -o -name 'ergo_*.zip' -o -name 'checksums.txt' \) | sort)
+          done < <(find "${workdir}" -maxdepth 1 -type f \( -name 'ipso_*.tar.gz' -o -name 'ipso_*.zip' -o -name 'checksums.txt' \) | sort)
           gh attestation verify "oci://${image}" \
             --repo "${{ github.repository }}" \
             --signer-workflow "${SIGNER_WORKFLOW}"

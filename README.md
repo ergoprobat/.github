@@ -1,6 +1,6 @@
-# ergoprobat/.github
+# ipsofacto-io/.github
 
-Organization profile and default community health files for the [ergoprobat](https://github.com/ergoprobat) repositories.
+Organization profile and default community health files for the [ipsofacto-io](https://github.com/ipsofacto-io) repositories.
 
 | Path | Purpose |
 | --- | --- |

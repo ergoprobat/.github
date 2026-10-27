@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/ergoprobat/.github/blob/main/SECURITY.md
+    url: https://github.com/ipsofacto-io/.github/blob/main/SECURITY.md
     about: Report vulnerabilities privately through private vulnerability reporting, never in a public issue.
   - name: Questions and ideas
-    url: https://github.com/ergoprobat/ergo/discussions
+    url: https://github.com/ipsofacto-io/ipso/discussions
     about: Ask questions and discuss ideas in GitHub Discussions.
